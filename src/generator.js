@@ -3,6 +3,7 @@
   const firstNames = ["Alex", "Camille", "Léa", "Marc", "Sophie", "Julien", "Emma", "Lucas"];
   const lastNames = ["Martin","Dubois","Moreau","Leroy","Rousseau","Faure"];
   const jobs = ["Étudiant","Développeur","Designer","Vendeur","Journaliste","Freelance"];
+  const emailDomains = ["gmail.com","outlook.fr","proton.me","yahoo.fr","laposte.net"];
 
   function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
@@ -10,6 +11,20 @@
     const word = keywords && keywords.length ? keywords.split(/\s+/)[0] : rand(firstNames).toLowerCase();
     const suffix = Math.floor(100 + Math.random()*900);
     return `${word}${rand(lastNames).toLowerCase()}${suffix}`;
+  }
+
+  function generateEmail(firstname, lastname){
+    const cleanFirst = (firstname || 'persona').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const cleanLast = (lastname || 'test').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const separators = ['.', '_', '-'];
+    const separator = rand(separators);
+    const seed = Math.floor(10 + Math.random() * 90);
+    return `${cleanFirst}${separator}${cleanLast}${seed}@${rand(emailDomains)}`;
+  }
+
+  function generatePhone(){
+    const mobile = 600000000 + Math.floor(Math.random() * 399999999);
+    return `+33${mobile}`;
   }
 
   function generateDOB(ageMin=18, ageMax=60){
@@ -44,7 +59,8 @@
     const dob = generateDOB();
     const avatar = null; // fetch on demand
     const job = rand(jobs);
-    const phone = `+33${Math.floor(600000000 + Math.random()*399999999)}`;
+    const email = generateEmail(firstname, lastname);
+    const phone = generatePhone();
     return {
       id: `persona_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
       name: themeName||'Persona',
@@ -54,6 +70,7 @@
       address: generateAddress(),
       avatar,
       job,
+      email,
       phone
     };
   }

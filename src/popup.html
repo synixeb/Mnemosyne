@@ -4,16 +4,140 @@
   <meta charset="utf-8" />
   <title>Mnemosyne</title>
   <style>
-    body{font-family:Arial,14px;margin:10px;width:320px}
-    .persona{padding:6px;border:1px solid #ddd;margin-bottom:6px}
-    button{margin-top:6px}
+    :root{
+      --bg: #0f172a;
+      --bg-2: #1c2940;
+      --panel: rgba(17, 23, 35, 0.92);
+      --gold: #d9b86c;
+      --gold-strong: #f1d28a;
+      --ivory: #f7f1e3;
+      --marble: #c9d5de;
+      --olive: #617a59;
+      --ink: #0b1320;
+      --success: #7bc98d;
+      --danger: #d96a5f;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-width: 340px;
+      background: linear-gradient(135deg, var(--bg) 0%, var(--bg-2) 55%, #2a1d1a 100%);
+      color: var(--ivory);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    body {
+      padding: 14px;
+      border: 1px solid rgba(217,184,108,0.6);
+      box-shadow: inset 0 0 18px rgba(217,184,108,0.08);
+    }
+
+    .panel {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(217,184,108,0.7);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.22);
+    }
+
+    .title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(217,184,108,0.45);
+    }
+
+    .title h3 {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: 0.06em;
+      color: var(--gold-strong);
+      text-transform: uppercase;
+    }
+
+    .title-badge {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(217,184,108,0.18);
+      border: 1px solid rgba(217,184,108,0.5);
+      color: var(--gold-strong);
+    }
+
+    #aliasStatus {
+      margin-bottom: 10px;
+      font-size: 12px;
+      color: var(--marble);
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(201,213,222,0.18);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    #list {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .persona {
+      padding: 10px 10px 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(217,184,108,0.35);
+      background: linear-gradient(180deg, rgba(32,44,60,0.95), rgba(18,23,34,0.95));
+    }
+
+    .persona strong {
+      color: var(--gold-strong);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .persona small {
+      display: block;
+      color: var(--marble);
+      margin-bottom: 8px;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 6px;
+      background: linear-gradient(180deg, #d8b76b 0%, #b98f40 100%);
+      color: #1b1205;
+      border: 1px solid rgba(88,63,26,0.8);
+      border-radius: 9px;
+      padding: 9px 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+    }
+
+    .secondary {
+      background: linear-gradient(180deg, #f5e6b9 0%, #d4bb7b 100%);
+    }
   </style>
 </head>
 <body>
-  <h3>Mnemosyne</h3>
-  <div id="aliasStatus" style="margin-bottom:8px;color:#444">Chargement config alias…</div>
-  <div id="list">Chargement…</div>
-  <button id="new">Générer une Persona rapide</button>
-  <script src="src/popup.js"></script>
+  <div class="panel">
+    <div class="title">
+      <h3>Mnemosyne</h3>
+      <span class="title-badge">Olympe</span>
+    </div>
+    <div id="aliasStatus">Chargement config alias…</div>
+    <div id="list">Chargement…</div>
+    <button id="new" class="secondary">Générer une Persona rapide</button>
+    <button id="settingsBtn" type="button">Ouvrir les réglages</button>
+  </div>
+  <script src="./popup.js"></script>
 </body>
 </html>

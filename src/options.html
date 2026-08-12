@@ -3,57 +3,228 @@
 <head>
   <meta charset="utf-8" />
   <title>Options - Mnemosyne</title>
-  <style>body{font-family:Arial,14px;padding:12px}label{display:block;margin-top:8px}</style>
+  <style>
+    :root {
+      --bg: #101826;
+      --bg-2: #1c2a3f;
+      --panel: rgba(16, 24, 38, 0.94);
+      --panel-soft: rgba(24, 35, 52, 0.9);
+      --gold: #d9b86c;
+      --gold-strong: #f2d794;
+      --ivory: #f8f2e7;
+      --marble: #dfe7ee;
+      --ink: #0b1320;
+      --olive: #5e705d;
+      --shadow: rgba(0,0,0,0.28);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: linear-gradient(135deg, var(--bg) 0%, var(--bg-2) 50%, #2c2018 100%);
+      color: var(--ivory);
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      background: rgba(11, 19, 32, 0.76);
+      border: 1px solid rgba(217,184,108,0.65);
+      border-radius: 18px;
+      box-shadow: 0 18px 40px var(--shadow);
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid rgba(217,184,108,0.5);
+      padding-bottom: 14px;
+    }
+
+    h2, h3 {
+      margin: 0 0 12px;
+      color: var(--gold-strong);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .chip {
+      display: inline-block;
+      background: rgba(217,184,108,0.12);
+      border: 1px solid rgba(217,184,108,0.5);
+      color: var(--gold-strong);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .section {
+      background: var(--panel-soft);
+      border: 1px solid rgba(217,184,108,0.35);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 18px;
+      box-shadow: inset 0 0 14px rgba(217,184,108,0.04);
+    }
+
+    form {
+      display: grid;
+      gap: 10px;
+    }
+
+    label {
+      display: block;
+      margin-top: 8px;
+      color: var(--ivory);
+      font-size: 14px;
+    }
+
+    input, textarea, select, button {
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid rgba(217,184,108,0.45);
+      background: rgba(10, 15, 24, 0.8);
+      color: var(--ivory);
+      padding: 9px 10px;
+      margin-top: 5px;
+    }
+
+    input[type="checkbox"] {
+      width: auto;
+      margin-right: 8px;
+      accent-color: var(--gold);
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      margin-top: 8px;
+      background: linear-gradient(180deg, #d8b76b 0%, #b98f40 100%);
+      color: #1c1207;
+      border: 1px solid rgba(78,57,21,0.75);
+      border-radius: 9px;
+      padding: 9px 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+    }
+
+    .secondary {
+      background: linear-gradient(180deg, #f3e7c9 0%, #d9bc79 100%);
+    }
+
+    .compact {
+      margin-top: 6px;
+    }
+  </style>
 </head>
 <body>
-  <h2>Personas</h2>
-  <div id="list">Chargement…</div>
-  <h3>Créer / Éditer</h3>
-  <form id="form">
-    <input type="hidden" id="id" />
-    <label>Nom thématique<input id="name" /></label>
-    <label>Prénom<input id="firstname" /></label>
-    <label>Nom<input id="lastname" /></label>
-    <label>Date de naissance<input id="dob" /></label>
-    <label>Adresse<input id="address" /></label>
-    <label>Métier<input id="job" /></label>
-    <label>Téléphone<input id="phone" /></label>
-    <button id="save">Enregistrer</button>
-    <button id="new">Nouveau</button>
-  </form>
-  <h3>Persona / Conteneur</h3>
-  <label><input type="checkbox" id="autoCreateContainer" /> Créer automatiquement un conteneur (Firefox) lors de la création d'une Persona</label>
-  <h3>Comptes liés</h3>
-  <div id="comptes">Chargement…</div>
-  <h3>Configuration alias email</h3>
-  <label>Provider
-    <select id="aliasProvider">
-      <option value="">(aucun)</option>
-      <option value="simplelogin">SimpleLogin</option>
-      <option value="anonaddy">AnonAddy</option>
-    </select>
-  </label>
-  <label><input type="checkbox" id="aliasUse" /> Activer l'utilisation des alias email</label>
-  <label>API Key<input id="aliasApiKey" placeholder="Clé API" /></label>
-  <label>Forwarding email (optionnel)<input id="aliasForward" placeholder="vous@exemple.com" /></label>
-  <button id="saveAlias">Enregistrer configuration alias</button>
-  <h3>Export / Import chiffré</h3>
-  <label>Mot de passe pour export/import<input id="exportPass" type="password" placeholder="mot de passe" /></label>
-  <button id="exportBtn">Exporter les données (fichier chiffré)</button>
-  <div style="margin-top:8px">
-    <label>Importer (collez la chaîne chiffrée):</label>
-    <textarea id="importData" style="width:100%;height:100px"></textarea>
-    <button id="importBtn">Importer</button>
-  </div>
-  <h3>Export / Import (JSON non chiffré)</h3>
-  <button id="exportPlainBtn">Exporter JSON (non chiffré)</button>
-  <div style="margin-top:8px">
-    <label>Importer JSON (collez ou chargez un fichier):</label>
-    <input type="file" id="importFile" accept="application/json" />
-    <textarea id="importPlainData" style="width:100%;height:100px"></textarea>
-    <button id="importPlainBtn">Importer JSON</button>
+  <div class="page">
+    <div class="header">
+      <h2>Mnemosyne</h2>
+      <span class="chip">Temple des identités</span>
+    </div>
+
+    <div class="section">
+      <h3>Personas</h3>
+      <div id="list">Chargement…</div>
+    </div>
+
+    <div class="section">
+      <h3>Créer / Éditer</h3>
+      <form id="form">
+        <input type="hidden" id="id" />
+        <label>Nom thématique<input id="name" /></label>
+        <label>Prénom<input id="firstname" /></label>
+        <label>Nom<input id="lastname" /></label>
+        <label>Email<input id="email" /></label>
+        <label>Date de naissance<input id="dob" /></label>
+        <label>Adresse<input id="address" /></label>
+        <label>Métier<input id="job" /></label>
+        <label>Téléphone<input id="phone" /></label>
+        <div class="row">
+          <button id="savePersona" type="submit">Enregistrer</button>
+          <button id="new" type="button" class="secondary">Nouveau</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="section">
+      <h3>Persona / Conteneur</h3>
+      <label><input type="checkbox" id="autoCreateContainer" /> Créer automatiquement un conteneur (Firefox) lors de la création d'une Persona</label>
+      <button id="saveConfig" type="button">Enregistrer la configuration</button>
+    </div>
+
+    <div class="section">
+      <h3>Comptes liés</h3>
+      <div id="comptes">Chargement…</div>
+    </div>
+
+    <div class="section">
+      <h3>Configuration alias email</h3>
+      <label>Provider
+        <select id="aliasProvider">
+          <option value="">(aucun)</option>
+          <option value="simplelogin">SimpleLogin</option>
+          <option value="anonaddy">AnonAddy</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="aliasUse" /> Activer l'utilisation des alias email</label>
+      <label>API Key<input id="aliasApiKey" placeholder="Clé API" /></label>
+      <label>Forwarding email (optionnel)<input id="aliasForward" placeholder="vous@exemple.com" /></label>
+      <button id="saveAlias" type="button">Enregistrer configuration alias</button>
+    </div>
+
+    <div class="section">
+      <h3>Export / Import chiffré</h3>
+      <label>Mot de passe pour export/import<input id="exportPass" type="password" placeholder="mot de passe" /></label>
+      <button id="exportBtn" type="button">Exporter les données (fichier chiffré)</button>
+      <div style="margin-top:12px">
+        <label>Importer (collez la chaîne chiffrée):</label>
+        <textarea id="importData"></textarea>
+        <button id="importBtn" type="button">Importer</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Export / Import (JSON non chiffré)</h3>
+      <button id="exportPlainBtn" type="button">Exporter JSON (non chiffré)</button>
+      <div style="margin-top:12px">
+        <label>Importer JSON (collez ou chargez un fichier):</label>
+        <input type="file" id="importFile" accept="application/json" />
+        <textarea id="importPlainData"></textarea>
+        <button id="importPlainBtn" type="button">Importer JSON</button>
+      </div>
+    </div>
   </div>
 
-  <script src="src/options.js"></script>
+  <script src="./options.js"></script>
 </body>
 </html>

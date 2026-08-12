@@ -2,8 +2,9 @@ async function refresh(){
   const res = await chrome.runtime.sendMessage({action:'listPersonas'});
   const listEl = document.getElementById('list');
   const comptesEl = document.getElementById('comptes');
+  const personas = res?.personas || [];
   listEl.innerHTML=''; comptesEl.innerHTML='';
-  (res.personas||[]).forEach(p=>{
+  personas.forEach(p=>{
     const div = document.createElement('div');
     div.innerHTML = `<strong>${p.name}</strong> — ${p.firstname} ${p.lastname} `;
     const edit = document.createElement('button'); edit.textContent='Éditer';
@@ -17,6 +18,12 @@ async function refresh(){
     div.appendChild(edit); div.appendChild(del);
     listEl.appendChild(div);
   });
+
+  if (personas.length > 0) {
+    fillForm(personas[0]);
+  } else {
+    fillForm({});
+  }
 
   const resC = await chrome.runtime.sendMessage({action:'listComptes'});
   const comptes = (resC && resC.comptes) || [];
@@ -38,6 +45,7 @@ function fillForm(p){
   document.getElementById('name').value = p.name||'';
   document.getElementById('firstname').value = p.firstname||'';
   document.getElementById('lastname').value = p.lastname||'';
+  document.getElementById('email').value = p.email||'';
   document.getElementById('dob').value = p.dob||'';
   document.getElementById('address').value = p.address||'';
   document.getElementById('job').value = p.job||'';
@@ -52,18 +60,26 @@ document.getElementById('form').addEventListener('submit', async (e)=>{
     name: document.getElementById('name').value,
     firstname: document.getElementById('firstname').value,
     lastname: document.getElementById('lastname').value,
+    email: document.getElementById('email').value,
     dob: document.getElementById('dob').value,
     address: document.getElementById('address').value,
     job: document.getElementById('job').value,
     phone: document.getElementById('phone').value
   };
-  if(id){
-    await chrome.runtime.sendMessage({action:'updatePersona', persona});
-  }else{
-    await chrome.runtime.sendMessage({action:'savePersona', persona});
+
+  try {
+    if(id){
+      await chrome.runtime.sendMessage({action:'updatePersona', persona});
+    }else{
+      await chrome.runtime.sendMessage({action:'savePersona', persona});
+    }
+    fillForm({});
+    refresh();
+    alert('Persona enregistrée.');
+  } catch (err) {
+    console.error('save persona failed', err);
+    alert('Échec de l\'enregistrement de la persona : ' + (err?.message || err));
   }
-  fillForm({});
-  refresh();
 });
 
 document.getElementById('new').addEventListener('click', (e)=>{
@@ -101,10 +117,10 @@ async function loadPersonaConfig(){
   document.getElementById('autoCreateContainer').checked = !!pconf.autoCreateContainer;
 }
 
-document.getElementById('save').addEventListener('click', async ()=>{
-  // also save personaConfig
+document.getElementById('saveConfig').addEventListener('click', async ()=>{
   const pconf = { autoCreateContainer: document.getElementById('autoCreateContainer').checked };
   await chrome.storage.local.set({personaConfig: pconf});
+  alert('Configuration enregistrée.');
 });
 
 loadPersonaConfig();
