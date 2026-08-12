@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Options - Mnemosyne</title>
+  <style>body{font-family:Arial,14px;padding:12px}label{display:block;margin-top:8px}</style>
+</head>
+<body>
+  <h2>Personas</h2>
+  <div id="list">Chargement…</div>
+  <h3>Créer / Éditer</h3>
+  <form id="form">
+    <input type="hidden" id="id" />
+    <label>Nom thématique<input id="name" /></label>
+    <label>Prénom<input id="firstname" /></label>
+    <label>Nom<input id="lastname" /></label>
+    <label>Date de naissance<input id="dob" /></label>
+    <label>Adresse<input id="address" /></label>
+    <label>Métier<input id="job" /></label>
+    <label>Téléphone<input id="phone" /></label>
+    <button id="save">Enregistrer</button>
+    <button id="new">Nouveau</button>
+  </form>
+  <h3>Persona / Conteneur</h3>
+  <label><input type="checkbox" id="autoCreateContainer" /> Créer automatiquement un conteneur (Firefox) lors de la création d'une Persona</label>
+  <h3>Comptes liés</h3>
+  <div id="comptes">Chargement…</div>
+  <h3>Configuration alias email</h3>
+  <label>Provider
+    <select id="aliasProvider">
+      <option value="">(aucun)</option>
+      <option value="simplelogin">SimpleLogin</option>
+      <option value="anonaddy">AnonAddy</option>
+    </select>
+  </label>
+  <label><input type="checkbox" id="aliasUse" /> Activer l'utilisation des alias email</label>
+  <label>API Key<input id="aliasApiKey" placeholder="Clé API" /></label>
+  <label>Forwarding email (optionnel)<input id="aliasForward" placeholder="vous@exemple.com" /></label>
+  <button id="saveAlias">Enregistrer configuration alias</button>
+  <h3>Export / Import chiffré</h3>
+  <label>Mot de passe pour export/import<input id="exportPass" type="password" placeholder="mot de passe" /></label>
+  <button id="exportBtn">Exporter les données (fichier chiffré)</button>
+  <div style="margin-top:8px">
+    <label>Importer (collez la chaîne chiffrée):</label>
+    <textarea id="importData" style="width:100%;height:100px"></textarea>
+    <button id="importBtn">Importer</button>
+  </div>
+  <h3>Export / Import (JSON non chiffré)</h3>
+  <button id="exportPlainBtn">Exporter JSON (non chiffré)</button>
+  <div style="margin-top:8px">
+    <label>Importer JSON (collez ou chargez un fichier):</label>
+    <input type="file" id="importFile" accept="application/json" />
+    <textarea id="importPlainData" style="width:100%;height:100px"></textarea>
+    <button id="importPlainBtn">Importer JSON</button>
+  </div>
+
+  <script src="src/options.js"></script>
+</body>
+</html>

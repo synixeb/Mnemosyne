@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Mnemosyne - Gestion d'identités fictives",
+  "version": "0.1.0",
+  "description": "Génère, gère et injecte des personas pour protéger la vie privée lors d'inscriptions.",
+  "permissions": ["storage", "scripting", "activeTab", "tabs", "contextualIdentities"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_page": "src/options.html",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content_script.js"]
+    }
+  ]
+}
