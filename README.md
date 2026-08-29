@@ -50,3 +50,16 @@ npm test
 ```
 
 Note: les tests utilisent `jest`. Ils vérifient le chiffrement/déchiffrement et les validateurs.
+
+## Publier une version
+
+Les releases GitHub utilisent la version sémantique déclarée dans `package.json` : `MAJEUR.MINEUR.CORRECTIF`, par exemple `1.0.2`.
+
+```bash
+npm run release:patch  # 1.0.1 -> 1.0.2
+npm run release:minor  # 1.0.2 -> 1.1.0
+npm run release:major  # 1.1.0 -> 2.0.0
+git push --follow-tags
+```
+
+La commande crée le commit et le tag Git. Le push du commit sur `main` lance le workflow GitHub Actions, qui exécute les tests puis crée la release `vMAJEUR.MINEUR.CORRECTIF` avec des notes générées automatiquement.
