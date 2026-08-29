@@ -1,17 +1,178 @@
-// Detection améliorée des formulaires et UI d'injection
+// Detection des champs par système de score pondéré multi-signaux (inspiré des gestionnaires de mots de passe)
 (function(){
   function normalizeText(value){ return (value || '').toString().trim(); }
 
+  // Minuscule + suppression des accents + normalisation des séparateurs, pour comparer id/name/label de façon fiable
   function normalizeFieldKey(value){
-    return (value || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+    return (value || '').toString()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
+  // Conservé pour compatibilité: teste une égalité ou inclusion simple entre texte normalisé et motifs
   function matchesAny(text, patterns){
     const normalized = normalizeFieldKey(text);
     return patterns.some(pattern => {
       const key = normalizeFieldKey(pattern);
       return normalized === key || normalized.includes(key);
     });
+  }
+
+  // Poids des signaux, du plus fiable (autocomplete standard, type HTML) au moins fiable (placeholder)
+  const WEIGHTS = { AUTOCOMPLETE: 100, TYPE: 70, ID_NAME: 90, ARIA_LABEL: 45, LABEL_TEXT: 40, PLACEHOLDER: 35 };
+  const MIN_SCORE_THRESHOLD = 35;
+
+  // Chaque catégorie définit ses propres signaux; les motifs utilisent \b pour éviter les faux positifs (ex: "nom" ne matche pas dans "prenom")
+  const FIELD_CATEGORIES = {
+    email: {
+      types: ['email'],
+      autocomplete: ['email'],
+      keywords: [/\bemail\b/, /\be ?mail\b/, /\bmail\b/, /\bcourriel\b/, /\bconfirm(ation)? ?email\b/]
+    },
+    firstname: {
+      autocomplete: ['given-name'],
+      keywords: [/\bfirst ?name\b/, /\bfirstname\b/, /\bgiven ?name\b/, /\bforename\b/, /\bprenom\b/, /\bfname\b/, /^first$/]
+    },
+    lastname: {
+      autocomplete: ['family-name'],
+      keywords: [/\blast ?name\b/, /\blastname\b/, /\bfamily ?name\b/, /\bsurname\b/, /\bnom\b/, /\blname\b/]
+    },
+    fullname: {
+      keywords: [/\bfull ?name\b/, /\bnom complet\b/, /\bcomplete ?name\b/, /\byour ?name\b/, /^name$/],
+      exclude: [/\buser ?name\b/, /\bfirst ?name\b/, /\blast ?name\b/, /\bcompany\b/, /\bentreprise\b/, /\borganization\b/, /\bbusiness\b/]
+    },
+    username: {
+      autocomplete: ['username'],
+      keywords: [/\buser ?name\b/, /\bpseudo\b/, /\blogin\b/, /\bhandle\b/, /\bnickname\b/, /\buid\b/]
+    },
+    phone: {
+      types: ['tel'],
+      autocomplete: ['tel'],
+      keywords: [/\bphone\b/, /\btelephone\b/, /\bmobile\b/, /\bportable\b/, /\bcell\b/, /\bgsm\b/, /\btel\b/]
+    },
+    address: {
+      autocomplete: ['street-address', 'address-line1'],
+      keywords: [/\baddress\b/, /\bstreet\b/, /\badresse\b/, /\brue\b/, /\bavenue\b/, /\bvia\b/, /\bresidence\b/]
+    },
+    city: {
+      autocomplete: ['address-level2'],
+      keywords: [/\bcity\b/, /\bville\b/, /\btown\b/, /\blocality\b/]
+    },
+    postalCode: {
+      autocomplete: ['postal-code'],
+      keywords: [/\bpostal\b/, /\bzip\b/, /\bpostcode\b/, /\bcode postal\b/, /^cp$/]
+    },
+    dob: {
+      types: ['date'],
+      autocomplete: ['bday'],
+      keywords: [/\bbirth\b/, /\bbirthday\b/, /\bdob\b/, /\bdate de naissance\b/, /\bnaissance\b/, /\bdate of birth\b/]
+    },
+    dobDay: {
+      autocomplete: ['bday-day'],
+      keywords: [/\bday\b/, /\bjour\b/, /^dd$/]
+    },
+    dobMonth: {
+      autocomplete: ['bday-month'],
+      keywords: [/\bmonth\b/, /\bmois\b/, /^mm$/]
+    },
+    dobYear: {
+      autocomplete: ['bday-year'],
+      keywords: [/\byear\b/, /\bannee\b/, /^yyyy$/, /^yy$/]
+    },
+    job: {
+      autocomplete: ['organization-title'],
+      keywords: [/\bjob\b/, /\bprofession\b/, /\bmetier\b/, /\boccupation\b/, /\brole\b/]
+    },
+    company: {
+      autocomplete: ['organization'],
+      keywords: [/\bcompany\b/, /\bentreprise\b/, /\borganization\b/, /\bbusiness\b/]
+    }
+  };
+
+  function getAutocompleteTokens(input){
+    const raw = (input.autocomplete || '').toString().toLowerCase();
+    return raw.split(/\s+/).map(token => token.trim()).filter(Boolean).flatMap(token => token.split(/[,;_]/).filter(Boolean));
+  }
+
+  function getLabelText(input){
+    const texts = [];
+    const labelEl = input.closest && input.closest('label');
+    if (labelEl) texts.push(labelEl.textContent || '');
+
+    const form = input.closest && input.closest('form');
+    if (form) {
+      Array.from(form.querySelectorAll('label')).forEach(label => {
+        if (label.contains(input) || label.control === input) texts.push(label.textContent || '');
+      });
+    }
+    return texts.join(' ');
+  }
+
+  // Champ invisible/hors-écran : on l'ignore pour ne pas remplir un piège anti-bot (honeypot)
+  function isFieldVisible(input){
+    if (input.hidden) return false;
+    if (typeof window === 'undefined' || typeof window.getComputedStyle !== 'function') return true;
+    const style = window.getComputedStyle(input);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    if (parseFloat(style.opacity || '1') === 0) return false;
+
+    const width = parseFloat(style.width);
+    const height = parseFloat(style.height);
+    if (!Number.isNaN(width) && !Number.isNaN(height) && width <= 1 && height <= 1) return false;
+
+    const left = parseFloat(style.left);
+    if (style.position === 'absolute' && !Number.isNaN(left) && left < -1000) return false;
+
+    return true;
+  }
+
+  function collectFieldSources(input){
+    return {
+      idName: normalizeFieldKey([input.id, input.name, input.getAttribute('data-name') || ''].join(' ')),
+      placeholder: normalizeFieldKey(input.placeholder || ''),
+      aria: normalizeFieldKey(input.getAttribute('aria-label') || ''),
+      label: normalizeFieldKey(getLabelText(input)),
+      autocomplete: getAutocompleteTokens(input),
+      type: (input.type || '').toLowerCase()
+    };
+  }
+
+  function scoreCategory(sources, def){
+    let score = 0;
+    if (def.types && def.types.includes(sources.type)) score += WEIGHTS.TYPE;
+    if (def.autocomplete && def.autocomplete.some(tok => sources.autocomplete.includes(tok))) score += WEIGHTS.AUTOCOMPLETE;
+
+    if (def.keywords) {
+      if (sources.idName && def.keywords.some(re => re.test(sources.idName))) score += WEIGHTS.ID_NAME;
+      if (sources.aria && def.keywords.some(re => re.test(sources.aria))) score += WEIGHTS.ARIA_LABEL;
+      if (sources.label && def.keywords.some(re => re.test(sources.label))) score += WEIGHTS.LABEL_TEXT;
+      if (sources.placeholder && def.keywords.some(re => re.test(sources.placeholder))) score += WEIGHTS.PLACEHOLDER;
+    }
+
+    if (def.exclude) {
+      const excluded = def.exclude.some(re => re.test(sources.idName) || re.test(sources.label) || re.test(sources.aria));
+      if (excluded) return -Infinity;
+    }
+
+    return score;
+  }
+
+  // Détecte la meilleure catégorie pour un champ en comparant les scores de toutes les catégories candidates
+  function detectFieldCategory(input){
+    const sources = collectFieldSources(input);
+    let best = null;
+    let bestScore = MIN_SCORE_THRESHOLD - 1;
+
+    Object.keys(FIELD_CATEGORIES).forEach(category => {
+      const score = scoreCategory(sources, FIELD_CATEGORIES[category]);
+      if (score > bestScore) { bestScore = score; best = category; }
+    });
+
+    if (!best) return null;
+    return { category: best, score: bestScore };
   }
 
   function applyValueToField(input, value){
@@ -37,34 +198,6 @@
     }
   }
 
-  function getFieldHints(input){
-    const texts = [
-      input.name || '',
-      input.id || '',
-      input.placeholder || '',
-      input.autocomplete || '',
-      input.getAttribute('aria-label') || '',
-      input.getAttribute('data-name') || ''
-    ];
-
-    const labelEl = input.closest('label');
-    if (labelEl) texts.push(labelEl.textContent || '');
-
-    const form = input.closest('form');
-    if (form) {
-      Array.from(form.querySelectorAll('label')).forEach(label => {
-        if (label.contains(input) || label.control === input) texts.push(label.textContent || '');
-      });
-    }
-
-    return texts.join(' ').toLowerCase();
-  }
-
-  function getAutocompleteTokens(input){
-    const raw = (input.autocomplete || '').toString().toLowerCase();
-    return raw.split(/\s+/).map(token => token.trim()).filter(Boolean).flatMap(token => token.split(/[,;_]/).filter(Boolean));
-  }
-
   function splitDobValue(dateString){
     const raw = normalizeText(dateString);
     if (!raw) return { year: '', month: '', day: '' };
@@ -88,46 +221,48 @@
     return { year: raw.match(/\b(19|20)\d{2}\b/)?.[0] || '', month: '', day: '' };
   }
 
-  function mapValueForField(input, persona, username, aliasEmail){
-    const attr = getFieldHints(input);
-    const type = (input.type || '').toLowerCase();
-    const autocomplete = getAutocompleteTokens(input);
-    const key = normalizeFieldKey(attr);
-    const dobParts = splitDobValue(persona.dob || '');
-
-    if (input.disabled || input.readOnly || type === 'hidden' || type === 'password') return null;
-
-    const emailValue = aliasEmail || persona.email || '';
-    const phoneValue = persona.phone || '';
+  function buildValueForCategory(category, persona, username, aliasEmail, dobParts){
     const addressValue = persona.address || '';
-
-    const autoMatch = autocomplete.join(' ');
-
-    if (type === 'email' || matchesAny(attr, ['email', 'e mail', 'mail', 'confirm email']) || autoMatch.includes('email')) return emailValue;
-    if (matchesAny(attr, ['firstname', 'first name', 'first', 'given', 'given name', 'forename', 'prenom', 'prénom', 'fname']) || autoMatch.includes('given-name')) return persona.firstname || '';
-    if (matchesAny(attr, ['lastname', 'last name', 'last', 'family', 'family name', 'surname', 'nom', 'lname']) || autoMatch.includes('family-name')) return persona.lastname || '';
-    if (matchesAny(attr, ['full name', 'nom complet', 'complete name', 'name']) && !matchesAny(attr, ['firstname', 'lastname', 'username', 'company', 'business', 'organization'])) return `${persona.firstname} ${persona.lastname}`;
-    if (matchesAny(attr, ['username', 'user name', 'pseudo', 'login', 'handle', 'nickname']) || autoMatch.includes('username')) return username || '';
-    if (type === 'tel' || matchesAny(attr, ['phone', 'telephone', 'mobile', 'portable', 'cell', 'gsm', 'tel', 'phone number']) || autoMatch.includes('tel')) return phoneValue;
-    if (matchesAny(attr, ['address', 'street', 'home address', 'adresse', 'rue', 'avenue', 'via', 'residence', 'street address']) || autoMatch.includes('street-address')) return addressValue;
-    if (matchesAny(attr, ['city', 'ville', 'town', 'locality', 'address level 2']) || autoMatch.includes('address-level2')) return (addressValue.split(',').map(s => s.trim()).filter(Boolean).slice(-2, -1)[0] || '');
-    if (matchesAny(attr, ['postal', 'zip', 'postcode', 'code postal', 'cp', 'postal code']) || autoMatch.includes('postal-code')) {
-      const match = addressValue.match(/\b\d{4,5}\b/);
-      return match ? match[0] : '';
+    switch(category){
+      case 'email': return aliasEmail || persona.email || '';
+      case 'firstname': return persona.firstname || '';
+      case 'lastname': return persona.lastname || '';
+      case 'fullname': return `${persona.firstname || ''} ${persona.lastname || ''}`.trim();
+      case 'username': return username || '';
+      case 'phone': return persona.phone || '';
+      case 'address': return addressValue;
+      case 'city': return addressValue.split(',').map(s => s.trim()).filter(Boolean).slice(-2, -1)[0] || '';
+      case 'postalCode': return addressValue.match(/\b\d{4,5}\b/)?.[0] || '';
+      case 'dob': return persona.dob || '';
+      case 'dobDay': return dobParts.day || '';
+      case 'dobMonth': return dobParts.month || '';
+      case 'dobYear': return dobParts.year || '';
+      case 'job': return persona.job || '';
+      case 'company': return persona.company || '';
+      default: return null;
     }
-    if (matchesAny(attr, ['birth', 'birthday', 'dob', 'date de naissance', 'naissance', 'date of birth']) || autoMatch.includes('bday') || type === 'date') return persona.dob || '';
-    if (matchesAny(attr, ['day', 'jour', 'dd']) || autoMatch.includes('day') || autoMatch.includes('bday-day')) return dobParts.day || '';
-    if (matchesAny(attr, ['month', 'mois', 'mm']) || autoMatch.includes('month') || autoMatch.includes('bday-month')) return dobParts.month || '';
-    if (matchesAny(attr, ['year', 'annee', 'yyyy', 'yy']) || autoMatch.includes('year') || autoMatch.includes('bday-year')) return dobParts.year || '';
-    if (matchesAny(attr, ['job', 'profession', 'metier', 'occupation', 'role']) || autoMatch.includes('organization-title')) return persona.job || '';
-    if (matchesAny(attr, ['company', 'entreprise', 'organization', 'business']) || autoMatch.includes('organization')) return persona.company || '';
+  }
 
-    const normalizedType = (input.tagName || '').toLowerCase();
-    if (normalizedType === 'select' && (key.includes('day') || key.includes('jour'))) return dobParts.day || '';
-    if (normalizedType === 'select' && (key.includes('month') || key.includes('mois'))) return dobParts.month || '';
-    if (normalizedType === 'select' && (key.includes('year') || key.includes('annee'))) return dobParts.year || '';
+  function mapValueForField(input, persona, username, aliasEmail){
+    const type = (input.type || '').toLowerCase();
+    if (input.disabled || input.readOnly || type === 'hidden' || type === 'password') return null;
+    if (!isFieldVisible(input)) return null;
 
-    return null;
+    const detection = detectFieldCategory(input);
+    if (!detection) {
+      // repli: cas des <select> jour/mois/année sans libellé assez explicite pour le score
+      const key = normalizeFieldKey([input.id, input.name].join(' '));
+      const dobParts = splitDobValue(persona.dob || '');
+      if ((input.tagName || '').toLowerCase() === 'select') {
+        if (key.includes('day') || key.includes('jour')) return dobParts.day || '';
+        if (key.includes('month') || key.includes('mois')) return dobParts.month || '';
+        if (key.includes('year') || key.includes('annee')) return dobParts.year || '';
+      }
+      return null;
+    }
+
+    const dobParts = splitDobValue(persona.dob || '');
+    return buildValueForCategory(detection.category, persona, username, aliasEmail, dobParts);
   }
 
   function injectIntoForm(persona, username, aliasEmail){
@@ -210,7 +345,7 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { splitDobValue, normalizeFieldKey, matchesAny, mapValueForField };
+    module.exports = { splitDobValue, normalizeFieldKey, matchesAny, mapValueForField, detectFieldCategory, isFieldVisible, FIELD_CATEGORIES };
   }
 })();
 
